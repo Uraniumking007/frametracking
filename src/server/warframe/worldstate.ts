@@ -3,19 +3,19 @@ import { serverQueryClient } from "../query-client";
 function resolveWorldStateUrl(platform: string): string {
   switch (platform) {
     case "pc":
-      return "https://content.warframe.com/dynamic/worldState.php";
+      return "https://api.warframe.com/cdn/worldState.php?";
     case "ps4":
     case "ps5":
-      return "https://content-ps4.warframe.com/dynamic/worldState.php";
+      return "https://api-ps4.warframe.com/cdn/worldState.php?";
     case "xb1":
     case "xbsx":
-      return "https://content-xb1.warframe.com/dynamic/worldState.php";
+      return "https://api-xb1.warframe.com/cdn/worldState.php?";
     case "swi":
-      return "https://content-swi.warframe.com/dynamic/worldState.php";
+      return "https://api-swi.warframe.com/cdn/worldState.php?";
     case "ios":
-      return "https://content-mob.warframe.com/dynamic/worldState.php";
+      return "https://api-mob.warframe.com/cdn/worldState.php?";
     default:
-      return "https://content.warframe.com/dynamic/worldState.php";
+      return "https://api.warframe.com/cdn/worldState.php?";
   }
 }
 
@@ -46,30 +46,50 @@ export const getWorldStateQueryKey = (platform: string) => [
 ];
 
 /**
- * Creates browser-like headers for Warframe API requests
- * to avoid bot detection and 403 errors
+ * Creates minimal headers for Warframe API requests
+ * Based on browse.wf approach - minimal headers to avoid detection
  */
 function createBrowserHeaders(): Record<string, string> {
+  // Use minimal headers - Akamai may be blocking based on IP, not headers
+  // Some sources suggest not setting Origin at all for serverless environments
   const headers: Record<string, string> = {
-    Accept: "application/json, text/plain;q=0.9,*/*;q=0.8",
-    "Accept-Language": process.env.WARFRAME_ACCEPT_LANGUAGE || "en-US,en;q=0.9",
-    "Accept-Encoding": "gzip, deflate, br",
+    Accept: "application/json",
     "User-Agent": process.env.WARFRAME_USER_AGENT?.trim() || defaultUserAgent,
     Referer: process.env.WARFRAME_REFERER?.trim() || defaultReferer,
-    "Cache-Control": "no-cache",
-    Pragma: "no-cache",
   };
 
-  // CRITICAL: Always set Origin to warframe.com domain, not your own domain
-  // Setting it to your own domain triggers Akamai WAF blocking
-  // Warframe's API expects requests to appear as if they come from warframe.com
-  // Note: Referer can be your personal domain, but Origin MUST be warframe.com
-  headers.Origin = "https://www.warframe.com";
-
-  // Don't set Sec-Fetch headers - they're browser-only and trigger bot detection
-  // in serverless environments. Akamai WAF can detect these are fake.
+  // Don't set Origin header - it may trigger WAF blocking in serverless environments
+  // Akamai can detect when Origin doesn't match the actual source IP
+  // The Referer header is sufficient for basic identification
 
   return headers;
+}
+
+/**
+ * Fallback to Oracle API when direct Warframe API fails
+ * Oracle API is provided by browse.wf and may have better IP reputation
+ */
+async function fetchFromOracleApi(): Promise<any> {
+  try {
+    console.log("Falling back to Oracle API (browse.wf)...");
+    const res = await fetch("https://oracle.browse.wf/worldState.json", {
+      headers: {
+        Accept: "application/json",
+        "User-Agent":
+          process.env.WARFRAME_USER_AGENT?.trim() || defaultUserAgent,
+      },
+      cache: "no-store",
+    });
+
+    if (!res.ok) {
+      throw new Error(`Oracle API failed: ${res.status} ${res.statusText}`);
+    }
+
+    return res.json();
+  } catch (error) {
+    console.error("Oracle API fallback also failed:", error);
+    throw error;
+  }
 }
 
 /**
@@ -149,8 +169,8 @@ const fetchFromWarframeApi = async (platform: string): Promise<any> => {
           url,
           platform,
           userAgent: headers["User-Agent"],
-          origin: headers.Origin,
           referer: headers.Referer,
+          note: "Origin header removed to avoid Akamai WAF blocking",
         });
       }
 
@@ -164,6 +184,24 @@ const fetchFromWarframeApi = async (platform: string): Promise<any> => {
           headers: Object.fromEntries(res.headers.entries()),
           body: errorText.substring(0, 500), // First 500 chars
         });
+
+        // If we get 403, try Oracle API as fallback (browse.wf provides this)
+        // This API may have better IP reputation and not be blocked by Akamai
+        if (res.status === 403) {
+          console.warn(
+            "Direct Warframe API blocked (403), attempting Oracle API fallback..."
+          );
+          try {
+            const oracleData = await fetchFromOracleApi();
+            console.log("Successfully fetched from Oracle API fallback");
+            requestCache.delete(cacheKey);
+            return oracleData;
+          } catch (oracleError) {
+            console.error("Oracle API fallback failed:", oracleError);
+            // Continue to throw original error
+          }
+        }
+
         throw new Error(
           `Failed to fetch world state: ${res.status} ${res.statusText}`
         );
