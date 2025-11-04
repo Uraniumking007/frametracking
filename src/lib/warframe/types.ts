@@ -305,11 +305,4 @@ export interface WorldState {
   [key: string]: unknown
 }
 
-/**
- * Platform validation result
- */
-export interface PlatformValidation {
-  platform: Platform
-  isValid: boolean
-}
 
