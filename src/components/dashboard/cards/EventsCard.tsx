@@ -163,11 +163,11 @@ function EventItem({ event }: { event: any }) {
   }
 
   return (
-    <div className="group relative p-4 mr-6 rounded-xl bg-gradient-to-br from-slate-700/40 to-slate-600/40 hover:from-slate-700/60 hover:to-slate-600/60 transition-all duration-300 border border-slate-600/30 hover:border-slate-500/50">
+    <div className="group relative p-4 mr-4 rounded-xl bg-gradient-to-br from-slate-700/40 to-slate-600/40 hover:from-slate-700/60 hover:to-slate-600/60 transition-all duration-300 border border-slate-600/30 hover:border-slate-500/50">
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-3">
           <Badge className={`text-xs font-medium ${getFactionColor(faction)}`}>
-            {safeText(faction) || 'Event'}
+            {safeText(faction) || "Event"}
           </Badge>
           {isActive && (
             <div className="flex items-center gap-1 text-green-400">
@@ -235,19 +235,19 @@ function EventItem({ event }: { event: any }) {
             <div className="text-xs text-slate-300 mb-2">Milestone Rewards</div>
             <div className="flex flex-wrap gap-1">
               {interimGoals.map((goal: number, index: number) => {
-                const isCompleted = count >= goal
+                const isCompleted = count >= goal;
                 return (
                   <div
                     key={index}
                     className={`px-2 py-1 rounded text-xs font-medium ${
                       isCompleted
-                        ? 'bg-green-500/20 text-green-300 border border-green-400/30'
-                        : 'bg-slate-600/30 text-slate-400 border border-slate-500/30'
+                        ? "bg-green-500/20 text-green-300 border border-green-400/30"
+                        : "bg-slate-600/30 text-slate-400 border border-slate-500/30"
                     }`}
                   >
                     {goal}
                   </div>
-                )
+                );
               })}
             </div>
           </div>
@@ -295,6 +295,6 @@ function EventItem({ event }: { event: any }) {
 
       <div className="absolute inset-0 bg-gradient-to-r from-purple-600/5 to-blue-600/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl pointer-events-none"></div>
     </div>
-  )
+  );
 }
 
