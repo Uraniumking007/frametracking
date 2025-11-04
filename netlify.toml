@@ -3,3 +3,8 @@
   publish = "dist/client"
   functions = "dist/server"
 
+[[redirects]]
+  from = "/*"
+  to = "/.netlify/functions/server"
+  status = 200
+
