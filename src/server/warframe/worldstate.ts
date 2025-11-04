@@ -61,9 +61,10 @@ function createBrowserHeaders(): Record<string, string> {
   };
 
   // CRITICAL: Always set Origin to warframe.com domain, not your own domain
-  // Setting it to your Netlify domain triggers Akamai WAF blocking
+  // Setting it to your own domain triggers Akamai WAF blocking
   // Warframe's API expects requests to appear as if they come from warframe.com
-  headers.Origin = "https://bhaveshp.dev/";
+  // Note: Referer can be your personal domain, but Origin MUST be warframe.com
+  headers.Origin = "https://www.warframe.com";
 
   // Don't set Sec-Fetch headers - they're browser-only and trigger bot detection
   // in serverless environments. Akamai WAF can detect these are fake.
