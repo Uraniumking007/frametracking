@@ -3,21 +3,17 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ExpandableCard } from '@/components/ui/expandable-card'
-import { sortFissuresByTier, fetchFissures, Platform } from '@/lib/warframe/api'
-import { useTimeRemaining } from '@/hooks/use-time'
-import { useDashboardPrefs } from '@/lib/store/dashboardPrefs'
-import { useSearch } from '@tanstack/react-router'
-import { useQuery } from '@tanstack/react-query'
+import { sortFissuresByTier, Platform } from "@/lib/warframe/api";
+import { useNormalFissures } from "@/lib/warframe/queries";
+import { useTimeRemaining } from "@/hooks/use-time";
+import { useDashboardPrefs } from "@/lib/store/dashboardPrefs";
+import { useSearch } from "@tanstack/react-router";
 
 export function NormalFissuresCard() {
   const prefs = useDashboardPrefs()
   const search = useSearch({ strict: false }) as { platform?: Platform }
   const platform = (search.platform ?? 'pc') as Platform
-  const fissuresQuery = useQuery({
-    queryKey: ['wf', platform, 'normalFissures'],
-    queryFn: () => fetchFissures(platform, 'normal'),
-    staleTime: 45_000, // 45 seconds - fissures appear/disappear frequently
-  })
+  const fissuresQuery = useNormalFissures(platform);
   const fissuresCount = fissuresQuery.data?.length || 0
 
   return (
