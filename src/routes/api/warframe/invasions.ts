@@ -1,10 +1,8 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { type Platform } from '@/lib/warframe/api'
-import { fetchWorldState } from '@/server/warframe/worldstate'
-import { resolveNodeLabel, resolveFactionLabel } from '@/lib/helpers/helpers'
-import { resolveItemName } from '@/server/warframe/items'
-
-const validPlatforms: Platform[] = ['pc', 'ps4', 'xb1', 'swi']
+import { getPlatformFromUrl } from "@/lib/warframe/platform";
+import { fetchWorldState } from "@/server/warframe/worldstate";
+import { resolveNodeLabel, resolveFactionLabel } from "@/lib/helpers/helpers";
+import { resolveItemName } from "@/server/warframe/items";
 
 async function resolveInvasionData(invasions: any[]): Promise<any[]> {
   const resolvedInvasions = await Promise.all(
@@ -86,12 +84,7 @@ export const Route = createFileRoute('/api/warframe/invasions')({
     handlers: {
       GET: async ({ request }) => {
         try {
-          const url = new URL(request.url)
-          const platformParam = (url.searchParams.get('platform') ||
-            'pc') as Platform
-          const platform: Platform = validPlatforms.includes(platformParam)
-            ? platformParam
-            : 'pc'
+          const platform = getPlatformFromUrl(request.url);
           const data = await fetchWorldState(platform)
           const invasions = data.Invasions || []
 
