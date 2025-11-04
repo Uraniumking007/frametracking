@@ -3,15 +3,15 @@ import {
   Scripts,
   createRootRouteWithContext,
 } from '@tanstack/react-router'
-// import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
-// import { TanStackDevtools } from '@tanstack/react-devtools'
+import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
+import { TanStackDevtools } from "@tanstack/react-devtools";
 
 import Header from '../components/Header'
 import { ErrorBoundary } from '../components/ErrorBoundary'
 
-// import StoreDevtools from '../lib/demo-store-devtools'
+import StoreDevtools from "../lib/demo-store-devtools";
 
-// import TanStackQueryDevtools from '../integrations/tanstack-query/devtools'
+import TanStackQueryDevtools from "../integrations/tanstack-query/devtools";
 
 import appCss from '../styles.css?url'
 
@@ -56,7 +56,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <ErrorBoundary>
           <Header />
           {children}
-          {/* <TanStackDevtools
+          <TanStackDevtools
             config={{
               position: "bottom-right",
             }}
@@ -68,7 +68,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
               StoreDevtools,
               TanStackQueryDevtools,
             ]}
-          /> */}
+          />
         </ErrorBoundary>
         <Scripts />
       </body>
