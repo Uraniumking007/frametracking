@@ -5,14 +5,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
 import { ExpandableCard } from '@/components/ui/expandable-card'
-import {
-  resolveMissionType,
-  resolveNodeLabel,
-  safeText,
-} from '@/lib/helpers/helpers'
-import { useQuery } from '@tanstack/react-query'
-import { fetchAlerts, Platform } from '@/lib/warframe/api'
-import { useResolvedItemNames } from '@/lib/helpers/resolveItems'
+import { resolveMissionType, safeText } from "@/lib/helpers/helpers";
+import type { Platform } from "@/lib/warframe/api";
+import { useAlerts } from "@/lib/warframe/queries";
+import { useResolvedItemNames } from "@/lib/helpers/resolveItems";
+import { useNodeLabel } from "@/lib/helpers/node-resolver";
 
 // Type definitions for better type safety
 interface AlertReward {
@@ -66,29 +63,25 @@ interface AlertsExpandedProps {
 }
 
 export const AlertsCard = memo(function AlertsCard(props: {
-  platform: Platform
-  full?: boolean
+  platform: Platform;
+  full?: boolean;
 }) {
-  const alerts = useQuery({
-    queryKey: ['wf', props.platform, 'alerts'],
-    queryFn: () => fetchAlerts(props.platform),
-    staleTime: 45_000, // 45 seconds - alerts can appear/disappear frequently
-  })
+  const alerts = useAlerts(props.platform);
 
   const alertsCount = useMemo(
     () => alerts.data?.length || 0,
-    [alerts.data?.length],
-  )
+    [alerts.data?.length]
+  );
 
   const title = useMemo(
-    () => `Active Alerts ${alertsCount > 0 ? `(${alertsCount})` : ''}`,
-    [alertsCount],
-  )
+    () => `Active Alerts ${alertsCount > 0 ? `(${alertsCount})` : ""}`,
+    [alertsCount]
+  );
 
   const expandedContent = useMemo(
     () => <AlertsExpanded isLoading={alerts.isLoading} data={alerts.data} />,
-    [alerts.isLoading, alerts.data],
-  )
+    [alerts.isLoading, alerts.data]
+  );
 
   return (
     <ExpandableCard title={title} expanded={expandedContent}>
@@ -123,8 +116,8 @@ export const AlertsCard = memo(function AlertsCard(props: {
         </CardContent>
       </Card>
     </ExpandableCard>
-  )
-})
+  );
+});
 
 const AlertsExpanded = memo(function AlertsExpanded({
   isLoading,
@@ -143,7 +136,7 @@ const AlertsExpanded = memo(function AlertsExpanded({
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   if (!data || data.length === 0) {
@@ -155,7 +148,7 @@ const AlertsExpanded = memo(function AlertsExpanded({
           Alerts will appear here when available
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -166,8 +159,8 @@ const AlertsExpanded = memo(function AlertsExpanded({
         </div>
       </div>
     </div>
-  )
-})
+  );
+});
 
 const AlertsTable = memo(function AlertsTable({
   isLoading,
@@ -183,11 +176,11 @@ const AlertsTable = memo(function AlertsTable({
           <Skeleton className="h-6 w-28 bg-slate-700/50" />
         </div>
       </div>
-    )
+    );
   }
 
-  const rows = data || []
-  const slice = typeof limit === 'number' ? rows.slice(0, limit) : rows
+  const rows = data || [];
+  const slice = typeof limit === "number" ? rows.slice(0, limit) : rows;
 
   if (slice.length === 0) {
     return (
@@ -195,7 +188,7 @@ const AlertsTable = memo(function AlertsTable({
         <AlertTriangle className="w-8 h-8 text-slate-400 mb-2" />
         <div className="text-slate-400 text-sm">No active alerts</div>
       </div>
-    )
+    );
   }
 
   return (
@@ -204,38 +197,8 @@ const AlertsTable = memo(function AlertsTable({
         <AlertRow key={alert.id} alert={alert} />
       ))}
     </div>
-  )
-})
-
-// Custom hook to resolve node labels asynchronously
-function useResolvedNodeLabel(location: string) {
-  const [resolvedLabel, setResolvedLabel] = useState<string>(location)
-  const [isLoading, setIsLoading] = useState(false)
-
-  useEffect(() => {
-    if (!location) {
-      setResolvedLabel('—')
-      return
-    }
-
-    const resolveLabel = async () => {
-      setIsLoading(true)
-      try {
-        const label = await resolveNodeLabel(location)
-        setResolvedLabel(label)
-      } catch (error) {
-        console.warn('Failed to resolve node label:', error)
-        setResolvedLabel(location)
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    resolveLabel()
-  }, [location])
-
-  return { resolvedLabel, isLoading }
-}
+  );
+});
 
 // Custom hook to process alert rewards
 function useAlertRewards(alert: Alert) {
@@ -336,8 +299,10 @@ const AlertRow = memo(function AlertRow({ alert }: AlertRowProps) {
 
   const rawLocation =
     safeText(alert.MissionInfo.location) || alert.MissionInfo.location
-  const { resolvedLabel: resolvedLocation, isLoading: locationLoading } =
-    useResolvedNodeLabel(rawLocation)
+  const {
+    data: resolvedLocation = rawLocation || "—",
+    isLoading: locationLoading,
+  } = useNodeLabel(rawLocation);
 
   const locationText = useMemo(() => {
     const missionType =
