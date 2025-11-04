@@ -1,11 +1,9 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { type Platform } from '@/lib/warframe/api'
-import { fetchWorldState } from '@/server/warframe/worldstate'
-import { resolveNodeLabel, resolveFactionLabel } from '@/lib/helpers/helpers'
-import { resolveItemName } from '@/server/warframe/items'
-import { resolveLocalizedText } from '@/lib/helpers/dict'
-
-const validPlatforms: Platform[] = ['pc', 'ps4', 'xb1', 'swi']
+import { getPlatformFromUrl } from "@/lib/warframe/platform";
+import { fetchWorldState } from "@/server/warframe/worldstate";
+import { resolveNodeLabel, resolveFactionLabel } from "@/lib/helpers/helpers";
+import { resolveItemName } from "@/server/warframe/items";
+import { resolveLocalizedText } from "@/lib/helpers/dict";
 
 async function resolveEventData(events: any[]): Promise<any[]> {
   const resolvedEvents = await Promise.all(
@@ -81,12 +79,7 @@ export const Route = createFileRoute('/api/warframe/events')({
     handlers: {
       GET: async ({ request }) => {
         try {
-          const url = new URL(request.url)
-          const platformParam = (url.searchParams.get('platform') ||
-            'pc') as Platform
-          const platform: Platform = validPlatforms.includes(platformParam)
-            ? platformParam
-            : 'pc'
+          const platform = getPlatformFromUrl(request.url);
           const data = await fetchWorldState(platform)
           const events = data.Goals || []
 
