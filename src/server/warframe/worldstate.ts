@@ -52,33 +52,21 @@ export const getWorldStateQueryKey = (platform: string) => [
 function createBrowserHeaders(): Record<string, string> {
   const headers: Record<string, string> = {
     Accept: "application/json, text/plain;q=0.9,*/*;q=0.8",
-    "Accept-Language":
-      process.env.WARFRAME_ACCEPT_LANGUAGE || "en-US,en;q=0.9",
+    "Accept-Language": process.env.WARFRAME_ACCEPT_LANGUAGE || "en-US,en;q=0.9",
     "Accept-Encoding": "gzip, deflate, br",
-    "User-Agent":
-      process.env.WARFRAME_USER_AGENT?.trim() || defaultUserAgent,
+    "User-Agent": process.env.WARFRAME_USER_AGENT?.trim() || defaultUserAgent,
     Referer: process.env.WARFRAME_REFERER?.trim() || defaultReferer,
     "Cache-Control": "no-cache",
     Pragma: "no-cache",
-    "Sec-Fetch-Dest": "empty",
-    "Sec-Fetch-Mode": "cors",
-    "Sec-Fetch-Site": "cross-site",
-    "Sec-Ch-Ua":
-      '"Chromium";v="128", "Not;A=Brand";v="24", "Google Chrome";v="128"',
-    "Sec-Ch-Ua-Mobile": "?0",
-    "Sec-Ch-Ua-Platform": '"Windows"',
   };
 
-  // Set Origin header based on environment
-  const origin =
-    process.env.PUBLIC_BASE_URL?.trim() ||
-    process.env.URL?.trim() ||
-    process.env.DEPLOY_PRIME_URL?.trim() ||
-    "https://www.warframe.com";
+  // CRITICAL: Always set Origin to warframe.com domain, not your own domain
+  // Setting it to your Netlify domain triggers Akamai WAF blocking
+  // Warframe's API expects requests to appear as if they come from warframe.com
+  headers.Origin = "https://bhaveshp.dev/";
 
-  if (origin) {
-    headers.Origin = origin.replace(/\/$/, "");
-  }
+  // Don't set Sec-Fetch headers - they're browser-only and trigger bot detection
+  // in serverless environments. Akamai WAF can detect these are fake.
 
   return headers;
 }
