@@ -1,0 +1,61 @@
+# llms.txt - Generative Engine Optimization File
+# This file helps AI crawlers and LLMs understand the structure and content of FrameTracking
+
+# Site Information
+Site: FrameTracking
+Description: Real-time Warframe game data tracking dashboard
+Purpose: Track active alerts, fissures, events, invasions, bounties, sorties, and more for Warframe players
+Language: en
+
+# Disclaimer
+NOT AFFILIATED: FrameTracking is not affiliated with, endorsed by, or connected to Digital Extremes or Warframe in any way, shape, or form. This is an independent fan-made tool for the Warframe community.
+
+# Main Routes
+Primary Pages:
+  / - Dashboard with customizable cards for all game data
+  /alerts - Active Warframe alerts
+  /events - Current in-game events
+  /fissures - Void fissures (normal and Steel Path)
+  /invasions - Active invasions
+  /bounties - Open world bounties
+  /archon-hunt - Archon Hunt information
+  /arbitration - Arbitration missions
+  /cycles - Open world cycles (Cetus, Vallis, Cambion)
+  /sortie - Daily sortie missions
+  /news - Latest Warframe news
+
+# Platform Support
+Platforms: PC, PS4, Xbox One, Nintendo Switch
+
+# Data Types
+Content Types:
+  - Alerts (mission alerts with rewards)
+  - Events (temporary in-game events)
+  - Fissures (void fissure missions for relic cracking)
+  - Invasions (faction invasions)
+  - Bounties (open world bounties)
+  - Sorties (daily high-level missions)
+  - Archon Hunts (weekly archon missions)
+  - Arbitrations (endless missions)
+  - Cycles (day/night cycles for open worlds)
+  - News (official Warframe news)
+
+# Update Frequency
+Data Refresh: Real-time (updated every 45-60 seconds)
+
+# API Endpoints
+API Routes:
+  /api/warframe/alerts
+  /api/warframe/events
+  /api/warframe/fissures
+  /api/warframe/invasions
+  /api/warframe/bounties
+  /api/warframe/sortie
+  /api/warframe/archonHunt
+  /api/warframe/arbitration
+  /api/warframe/cycles
+  /api/warframe/news
+
+# Contact
+For questions about this site's content, refer to the main dashboard at /
+
