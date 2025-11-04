@@ -294,6 +294,41 @@ You can find out everything you need to know on how to use TanStack Store in the
 
 Files prefixed with `demo` can be safely deleted. They are there to provide a starting point for you to play around with the features you've installed.
 
+# Environment Configuration
+
+## Warframe API Configuration
+
+The application makes requests to the Warframe API. To avoid 403 Forbidden errors in production (especially on Netlify), you may need to configure the following optional environment variables:
+
+### Optional Environment Variables
+
+- `WARFRAME_USER_AGENT` - Custom User-Agent string for API requests. Defaults to a Chrome browser user agent.
+- `WARFRAME_REFERER` - Referer header value. Defaults to `https://www.warframe.com/`.
+- `WARFRAME_ACCEPT_LANGUAGE` - Accept-Language header value. Defaults to `en-US,en;q=0.9`.
+- `PUBLIC_BASE_URL` - Base URL of your application (used for Origin header). Automatically detected from Netlify environment variables (`URL`, `DEPLOY_PRIME_URL`) if not set.
+
+### Netlify Configuration
+
+When deploying to Netlify, the following environment variables are automatically available:
+
+- `URL` - Your site's main URL
+- `DEPLOY_PRIME_URL` - The URL of the current deploy
+- `NETLIFY` - Set to `true` in Netlify functions
+
+The application will automatically use these to set the `Origin` header correctly. You typically don't need to set `PUBLIC_BASE_URL` manually on Netlify.
+
+### Troubleshooting 403 Forbidden Errors
+
+If you encounter 403 Forbidden errors from the Warframe API:
+
+1. **Check headers**: The application includes browser-like headers to avoid bot detection. Ensure environment variables are set correctly.
+
+2. **Request deduplication**: The application includes automatic request deduplication to prevent multiple concurrent requests that might trigger abuse detection.
+
+3. **Retry logic**: The application automatically retries failed requests (up to 3 times) with exponential backoff.
+
+4. **Alternative API**: If issues persist, consider using the alternative API endpoint mentioned in the code: `https://oracle.browse.wf/worldState.json`
+
 # Learn More
 
 You can learn more about all of the offerings from TanStack in the [TanStack documentation](https://tanstack.com).

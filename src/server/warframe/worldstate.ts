@@ -24,45 +24,191 @@ const defaultUserAgent =
 
 const defaultReferer = "https://www.warframe.com/";
 
+// Request deduplication cache to prevent concurrent identical requests
+// Key: platform, Value: { promise: Promise, timestamp: number }
+const requestCache = new Map<
+  string,
+  { promise: Promise<any>; timestamp: number }
+>();
+
+// Cache TTL: 60 seconds (same as TanStack Query staleTime)
+const CACHE_TTL_MS = 60 * 1000;
+
+// Maximum retry attempts for 403 errors
+const MAX_RETRIES = 3;
+// Base delay for exponential backoff (in milliseconds)
+const BASE_RETRY_DELAY_MS = 1000;
+
 // 1. Define a unique Query Key for this data (platform-specific)
 export const getWorldStateQueryKey = (platform: string) => [
   "worldstate",
   platform,
 ];
 
+/**
+ * Creates browser-like headers for Warframe API requests
+ * to avoid bot detection and 403 errors
+ */
+function createBrowserHeaders(): Record<string, string> {
+  const headers: Record<string, string> = {
+    Accept: "application/json, text/plain;q=0.9,*/*;q=0.8",
+    "Accept-Language":
+      process.env.WARFRAME_ACCEPT_LANGUAGE || "en-US,en;q=0.9",
+    "Accept-Encoding": "gzip, deflate, br",
+    "User-Agent":
+      process.env.WARFRAME_USER_AGENT?.trim() || defaultUserAgent,
+    Referer: process.env.WARFRAME_REFERER?.trim() || defaultReferer,
+    "Cache-Control": "no-cache",
+    Pragma: "no-cache",
+    "Sec-Fetch-Dest": "empty",
+    "Sec-Fetch-Mode": "cors",
+    "Sec-Fetch-Site": "cross-site",
+    "Sec-Ch-Ua":
+      '"Chromium";v="128", "Not;A=Brand";v="24", "Google Chrome";v="128"',
+    "Sec-Ch-Ua-Mobile": "?0",
+    "Sec-Ch-Ua-Platform": '"Windows"',
+  };
+
+  // Set Origin header based on environment
+  const origin =
+    process.env.PUBLIC_BASE_URL?.trim() ||
+    process.env.URL?.trim() ||
+    process.env.DEPLOY_PRIME_URL?.trim() ||
+    "https://www.warframe.com";
+
+  if (origin) {
+    headers.Origin = origin.replace(/\/$/, "");
+  }
+
+  return headers;
+}
+
+/**
+ * Retry logic with exponential backoff for transient failures
+ */
+async function fetchWithRetry(
+  url: string,
+  headers: Record<string, string>,
+  retryCount = 0
+): Promise<Response> {
+  try {
+    const res = await fetch(url, {
+      headers,
+      cache: "no-store",
+      redirect: "follow",
+    });
+
+    // If we get a 403 and haven't exceeded retry limit, retry with backoff
+    if (res.status === 403 && retryCount < MAX_RETRIES) {
+      const delay = BASE_RETRY_DELAY_MS * Math.pow(2, retryCount);
+      console.warn(
+        `Got 403 Forbidden, retrying in ${delay}ms (attempt ${retryCount + 1}/${MAX_RETRIES})`
+      );
+      await new Promise((resolve) => setTimeout(resolve, delay));
+      return fetchWithRetry(url, headers, retryCount + 1);
+    }
+
+    return res;
+  } catch (error) {
+    // For network errors, also retry
+    if (retryCount < MAX_RETRIES) {
+      const delay = BASE_RETRY_DELAY_MS * Math.pow(2, retryCount);
+      console.warn(
+        `Network error, retrying in ${delay}ms (attempt ${retryCount + 1}/${MAX_RETRIES}):`,
+        error
+      );
+      await new Promise((resolve) => setTimeout(resolve, delay));
+      return fetchWithRetry(url, headers, retryCount + 1);
+    }
+    throw error;
+  }
+}
+
 // 2. Define the actual fetcher function. This will now only
 //    be called by TanStack Query when data is stale.
 const fetchFromWarframeApi = async (platform: string): Promise<any> => {
   const url = resolveWorldStateUrl(platform);
+  const cacheKey = platform;
 
-  console.log(
-    `FETCHING FROM WARFRAME API... (Platform: ${platform}) (This should only log once per minute per platform)`
-  );
+  // Check if there's an in-flight request for this platform
+  const cached = requestCache.get(cacheKey);
+  const now = Date.now();
 
-  const headers: Record<string, string> = {
-    Accept: "application/json, text/plain;q=0.9,*/*;q=0.8",
-    "Accept-Language": process.env.WARFRAME_ACCEPT_LANGUAGE || "en-US,en;q=0.9",
-    "User-Agent": process.env.WARFRAME_USER_AGENT?.trim() || defaultUserAgent,
-    Referer: process.env.WARFRAME_REFERER?.trim() || defaultReferer,
-  };
-
-  if (process.env.PUBLIC_BASE_URL?.trim()) {
-    headers.Origin = process.env.PUBLIC_BASE_URL.trim();
+  if (cached && now - cached.timestamp < CACHE_TTL_MS) {
+    // Return the existing promise to avoid duplicate requests
+    console.log(
+      `Reusing in-flight request for platform: ${platform} (deduplication)`
+    );
+    return cached.promise;
   }
 
-  const res = await fetch(url, {
-    headers,
-    cache: "no-store",
-    redirect: "follow",
+  // Create new request promise
+  const requestPromise = (async () => {
+    try {
+      console.log(
+        `FETCHING FROM WARFRAME API... (Platform: ${platform}) (This should only log once per minute per platform)`
+      );
+
+      const headers = createBrowserHeaders();
+
+      // Log request details in production for debugging
+      if (
+        process.env.NETLIFY === "true" ||
+        process.env.NODE_ENV === "production"
+      ) {
+        console.log("Request details:", {
+          url,
+          platform,
+          userAgent: headers["User-Agent"],
+          origin: headers.Origin,
+          referer: headers.Referer,
+        });
+      }
+
+      const res = await fetchWithRetry(url, headers);
+
+      if (!res.ok) {
+        const errorText = await res.text().catch(() => "");
+        console.error("Warframe API error response:", {
+          status: res.status,
+          statusText: res.statusText,
+          headers: Object.fromEntries(res.headers.entries()),
+          body: errorText.substring(0, 500), // First 500 chars
+        });
+        throw new Error(
+          `Failed to fetch world state: ${res.status} ${res.statusText}`
+        );
+      }
+
+      const data = await res.json();
+
+      // Clean up cache entry after successful request
+      requestCache.delete(cacheKey);
+
+      return data;
+    } catch (error) {
+      // Clean up cache entry on error so retry can happen
+      requestCache.delete(cacheKey);
+      throw error;
+    }
+  })();
+
+  // Store the promise in cache
+  requestCache.set(cacheKey, {
+    promise: requestPromise,
+    timestamp: now,
   });
 
-  if (!res.ok) {
-    throw new Error(
-      `Failed to fetch world state: ${res.status} ${res.statusText}`
-    );
+  // Clean up old cache entries periodically (older than 2x TTL)
+  if (requestCache.size > 10) {
+    for (const [key, value] of requestCache.entries()) {
+      if (now - value.timestamp > CACHE_TTL_MS * 2) {
+        requestCache.delete(key);
+      }
+    }
   }
 
-  return res.json();
+  return requestPromise;
 };
 
 /**
