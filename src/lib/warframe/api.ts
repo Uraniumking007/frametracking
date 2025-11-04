@@ -1,4 +1,14 @@
 import { z } from 'zod'
+import type {
+  Alert,
+  Event,
+  Invasion,
+  Fissure,
+  SortieResponse,
+  ArchonHuntResponse,
+  Arbitration,
+  NewsItem,
+} from './types'
 
 export type Platform = 'pc' | 'ps4' | 'xb1' | 'swi'
 
@@ -17,33 +27,31 @@ export const newsItem = z.object({
   eta: z.string().optional(),
 })
 
-export async function fetchNews(platform: Platform) {
-  return getJson<z.infer<typeof newsItem>[]>(
-    `/api/warframe/news?platform=${platform}`,
-  )
+export async function fetchNews(platform: Platform): Promise<NewsItem[]> {
+  return getJson<NewsItem[]>(`/api/warframe/news?platform=${platform}`)
 }
 
 export async function fetchArbitration(platform: Platform) {
-  return getJson<any>(`${baseUrl(platform)}/arbitration`)
+  return getJson<Arbitration>(`${baseUrl(platform)}/arbitration`)
 }
 
-export async function fetchAlerts(platform: Platform) {
-  return getJson<any[]>(`/api/warframe/alerts?platform=${platform}`)
+export async function fetchAlerts(platform: Platform): Promise<Alert[]> {
+  return getJson<Alert[]>(`/api/warframe/alerts?platform=${platform}`)
 }
 
-export async function fetchEvents(platform: Platform) {
-  return getJson<any[]>(`/api/warframe/events?platform=${platform}`)
+export async function fetchEvents(platform: Platform): Promise<Event[]> {
+  return getJson<Event[]>(`/api/warframe/events?platform=${platform}`)
 }
 
 export async function fetchFissures(
   platform: Platform,
   type: 'normal' | 'steelPath' = 'normal',
-) {
-  const rows = await getJson<any[]>(
+): Promise<Fissure[]> {
+  const rows = await getJson<Fissure[]>(
     `/api/warframe/fissures?platform=${platform}&type=${type}`,
   )
   // Enrich with resolved node label and time remaining client-side
-  const computeTimeLeft = (expiry?: any): string | undefined => {
+  const computeTimeLeft = (expiry?: string | number): string | undefined => {
     try {
       const exp = expiry ? new Date(expiry) : undefined
       if (!exp || isNaN(exp.getTime())) return undefined
@@ -94,9 +102,9 @@ export async function fetchFissures(
 }
 
 export function sortFissuresByTier(
-  fissures: any[],
+  fissures: Fissure[],
   showOmniFirst: boolean = false,
-) {
+): Fissure[] {
   const defaultTierOrder = ['Lith', 'Neo', 'Meso', 'Axi', 'Requiem', 'Omnia']
   const omniFirstTierOrder = ['Omnia', 'Lith', 'Neo', 'Meso', 'Axi', 'Requiem']
 
@@ -131,16 +139,20 @@ export function sortFissuresByTier(
   return sortedFissures
 }
 
-export async function fetchSortie(platform: Platform) {
-  return getJson<any>(`/api/warframe/sortie?platform=${platform}`)
+export async function fetchSortie(platform: Platform): Promise<SortieResponse> {
+  return getJson<SortieResponse>(`/api/warframe/sortie?platform=${platform}`)
 }
 
-export async function fetchArchonHunt(platform: Platform) {
-  return getJson<any>(`/api/warframe/archonHunt?platform=${platform}`)
+export async function fetchArchonHunt(
+  platform: Platform,
+): Promise<ArchonHuntResponse> {
+  return getJson<ArchonHuntResponse>(
+    `/api/warframe/archonHunt?platform=${platform}`,
+  )
 }
 
-export async function fetchInvasions(platform: Platform) {
-  return getJson<any[]>(`/api/warframe/invasions?platform=${platform}`)
+export async function fetchInvasions(platform: Platform): Promise<Invasion[]> {
+  return getJson<Invasion[]>(`/api/warframe/invasions?platform=${platform}`)
 }
 
 export async function fetchCycles(platform: Platform) {
