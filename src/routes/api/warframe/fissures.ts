@@ -1,9 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { type Platform } from '@/lib/warframe/api'
-import { fetchWorldState } from '@/server/warframe/worldstate'
-import { resolveMissionType, resolveNodeLabel } from '@/lib/helpers/helpers'
-
-const validPlatforms: Platform[] = ['pc', 'ps4', 'xb1', 'swi']
+import { getPlatformFromUrl } from "@/lib/warframe/platform";
+import { fetchWorldState } from "@/server/warframe/worldstate";
+import { resolveMissionType, resolveNodeLabel } from "@/lib/helpers/helpers";
 
 function resolveFissureTier(modifier: string) {
   switch (modifier) {
@@ -30,11 +28,7 @@ export const Route = createFileRoute('/api/warframe/fissures')({
       GET: async ({ request }) => {
         try {
           const url = new URL(request.url)
-          const platformParam = (url.searchParams.get('platform') ||
-            'pc') as Platform
-          const platform: Platform = validPlatforms.includes(platformParam)
-            ? platformParam
-            : 'pc'
+          const platform = getPlatformFromUrl(request.url);
           const worldstate = await fetchWorldState(platform)
           const typeParam = url.searchParams.get('type') || 'all'
           if (typeParam === 'normal') {
