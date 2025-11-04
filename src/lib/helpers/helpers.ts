@@ -70,13 +70,28 @@ export async function fetchSolNodes(): Promise<Record<string, SolNodeEntry>> {
 }
 
 export async function resolveNodeLabel(code?: any): Promise<string> {
-  const raw = safeText(code) ?? (code != null ? String(code) : '')
-  if (!raw) return '—'
-  const normalized = normalizeNodeCode(raw)
-  const lookupKey = normalized || raw
-  const dict = await fetchSolNodes()
-  const label = dict[lookupKey]?.value || dict[raw]?.value
-  return label || raw
+  const raw = safeText(code) ?? (code != null ? String(code) : "");
+  if (!raw) return "—";
+  const normalized = normalizeNodeCode(raw);
+  const lookupKey = normalized || raw;
+  const dict = await fetchSolNodes();
+
+  // Try lookup with normalized key
+  let label = dict[lookupKey]?.value || dict[raw]?.value;
+
+  // If not found and it's a HexNode, try to provide a better fallback
+  if (!label && lookupKey.startsWith("HexNode")) {
+    // Hex nodes are typically locations in The Hex (1999 mode)
+    // Try to extract meaningful info from the node code
+    const hexNodeNum = lookupKey.replace(/^HexNode/i, "");
+    if (hexNodeNum) {
+      label = `Hex Node ${hexNodeNum}`;
+    } else {
+      label = "The Hex";
+    }
+  }
+
+  return label || raw;
 }
 
 export async function resolveNodeMeta(
@@ -92,25 +107,31 @@ export async function resolveNodeMeta(
 }
 
 export function normalizeNodeCode(input: string): string {
-  let s = input.trim()
+  let s = input.trim();
   // Fix common typo variations like "SoleNode" -> "SolNode"
-  s = s.replace(/^SoleNode/i, 'SolNode')
+  s = s.replace(/^SoleNode/i, "SolNode");
   // Normalize case: ensure proper capitalization for SolNode prefix
-  s = s.replace(/^solnode/i, 'SolNode')
+  s = s.replace(/^solnode/i, "SolNode");
+  // Normalize HexNode prefix (case-insensitive)
+  s = s.replace(/^hexnode/i, "HexNode");
   // Strip leading zeros from numeric suffix (e.g., SolNode000 -> SolNode0)
-  const m = s.match(/^([A-Za-z]+)(\d+)$/)
+  const m = s.match(/^([A-Za-z]+)(\d+)$/);
   if (m) {
-    const prefix = m[1]
+    const prefix = m[1];
     // Normalize prefix: capitalize first letter, lowercase the rest, then fix common patterns
     const normalizedPrefix =
-      prefix.charAt(0).toUpperCase() + prefix.slice(1).toLowerCase()
-    // Fix SolNode specifically (common case)
-    const fixedPrefix =
-      normalizedPrefix === 'Solnode' ? 'SolNode' : normalizedPrefix
-    const num = String(parseInt(m[2], 10))
-    return `${fixedPrefix}${num}`
+      prefix.charAt(0).toUpperCase() + prefix.slice(1).toLowerCase();
+    // Fix common node prefixes
+    let fixedPrefix = normalizedPrefix;
+    if (normalizedPrefix === "Solnode") {
+      fixedPrefix = "SolNode";
+    } else if (normalizedPrefix === "Hexnode") {
+      fixedPrefix = "HexNode";
+    }
+    const num = String(parseInt(m[2], 10));
+    return `${fixedPrefix}${num}`;
   }
-  return s
+  return s;
 }
 
 export function safeText(v: any): string | undefined {
