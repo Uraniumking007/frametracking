@@ -1,66 +1,61 @@
-import { useQuery } from '@tanstack/react-query'
-import { AlertTriangle, Clock, Shield, Target } from 'lucide-react'
-import { memo, useEffect, useMemo, useState } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Skeleton } from '@/components/ui/skeleton'
-import { Badge } from '@/components/ui/badge'
-import { ExpandableCard } from '@/components/ui/expandable-card'
+import { AlertTriangle, Clock, Shield, Target } from "lucide-react";
+import { memo, useEffect, useMemo, useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
+import { ExpandableCard } from "@/components/ui/expandable-card";
 import type {
   SortieResponse,
   SortieVariant,
-} from '@/routes/api/warframe/sortie'
+} from "@/routes/api/warframe/sortie";
 import {
   resolveMissionType,
   resolveNodeLabel,
   safeText,
-} from '@/lib/helpers/helpers'
-import type { Platform } from '@/lib/warframe/api'
-import { fetchSortie } from '@/lib/warframe/api'
-import { useSearch } from '@tanstack/react-router'
+} from "@/lib/helpers/helpers";
+import type { Platform } from "@/lib/warframe/api";
+import { useSortie } from "@/lib/warframe/queries";
+import { useSearch } from "@tanstack/react-router";
 
 // Type definitions for better type safety
 interface SortieCardProps {
-  platform: Platform
+  platform: Platform;
 }
 
 interface SortieRowProps {
-  variant: SortieVariant
-  index: number
-  isExpanded: boolean
-  sortieData?: SortieResponse
+  variant: SortieVariant;
+  index: number;
+  isExpanded: boolean;
+  sortieData?: SortieResponse;
 }
 
 interface SortieTableProps {
-  isLoading: boolean
-  data?: SortieResponse
-  limit?: number
+  isLoading: boolean;
+  data?: SortieResponse;
+  limit?: number;
 }
 
 interface SortieExpandedProps {
-  isLoading: boolean
-  data?: SortieResponse
+  isLoading: boolean;
+  data?: SortieResponse;
 }
 export const SortieCard = memo(function SortieCard(props: SortieCardProps) {
-  const sortie = useQuery({
-    queryKey: ['wf', props.platform, 'sortie'],
-    queryFn: () => fetchSortie(props.platform),
-    staleTime: 10 * 60_000, // 10 minutes - sortie changes daily
-  })
+  const sortie = useSortie(props.platform);
 
   const sortieCount = useMemo(
     () => sortie.data?.variants?.length || 0,
-    [sortie.data?.variants?.length],
-  )
+    [sortie.data?.variants?.length]
+  );
 
   const title = useMemo(
-    () => `Daily Sortie ${sortieCount > 0 ? `(${sortieCount})` : ''}`,
-    [sortieCount],
-  )
+    () => `Daily Sortie ${sortieCount > 0 ? `(${sortieCount})` : ""}`,
+    [sortieCount]
+  );
 
   const expandedContent = useMemo(
     () => <SortieExpanded isLoading={sortie.isLoading} data={sortie.data} />,
-    [sortie.isLoading, sortie.data],
-  )
+    [sortie.isLoading, sortie.data]
+  );
 
   return (
     <ExpandableCard title={title} expanded={expandedContent}>
@@ -88,8 +83,8 @@ export const SortieCard = memo(function SortieCard(props: SortieCardProps) {
         </CardContent>
       </Card>
     </ExpandableCard>
-  )
-})
+  );
+});
 
 const SortieExpanded = memo(function SortieExpanded({
   isLoading,
@@ -108,7 +103,7 @@ const SortieExpanded = memo(function SortieExpanded({
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   if (!data || !data.variants?.length) {
@@ -122,7 +117,7 @@ const SortieExpanded = memo(function SortieExpanded({
           Sortie missions will appear here when available
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -133,8 +128,8 @@ const SortieExpanded = memo(function SortieExpanded({
         </div>
       </div>
     </div>
-  )
-})
+  );
+});
 
 const SortieTable = memo(function SortieTable({
   isLoading,
@@ -150,7 +145,7 @@ const SortieTable = memo(function SortieTable({
           <Skeleton className="h-6 w-28 bg-slate-700/50" />
         </div>
       </div>
-    )
+    );
   }
 
   if (!data || !data.variants?.length) {
@@ -161,11 +156,11 @@ const SortieTable = memo(function SortieTable({
           No sortie missions available
         </div>
       </div>
-    )
+    );
   }
 
-  const variants = data.variants || []
-  const slice = typeof limit === 'number' ? variants.slice(0, limit) : variants
+  const variants = data.variants || [];
+  const slice = typeof limit === "number" ? variants.slice(0, limit) : variants;
 
   return (
     <div className="space-y-3">
@@ -179,53 +174,53 @@ const SortieTable = memo(function SortieTable({
         />
       ))}
     </div>
-  )
-})
+  );
+});
 
 // Custom hook to resolve node labels asynchronously
 function useResolvedNodeLabel(node: string) {
-  const [resolvedLabel, setResolvedLabel] = useState<string>(node)
-  const [isLoading, setIsLoading] = useState(false)
+  const [resolvedLabel, setResolvedLabel] = useState<string>(node);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     if (!node) {
-      setResolvedLabel('—')
-      return
+      setResolvedLabel("—");
+      return;
     }
 
     const resolveLabel = async () => {
-      setIsLoading(true)
+      setIsLoading(true);
       try {
-        const label = await resolveNodeLabel(node)
-        setResolvedLabel(label)
+        const label = await resolveNodeLabel(node);
+        setResolvedLabel(label);
       } catch (error) {
-        console.warn('Failed to resolve node label:', error)
-        setResolvedLabel(node)
+        console.warn("Failed to resolve node label:", error);
+        setResolvedLabel(node);
       } finally {
-        setIsLoading(false)
+        setIsLoading(false);
       }
-    }
+    };
 
-    resolveLabel()
-  }, [node])
+    resolveLabel();
+  }, [node]);
 
-  return { resolvedLabel, isLoading }
+  return { resolvedLabel, isLoading };
 }
 
 // Custom hook to process sortie expiration
 function useSortieExpiration(data?: SortieResponse) {
   return useMemo(() => {
-    if (!data?.eta || data.eta === 'No sortie available') {
-      return { expiresText: '—', isExpiringSoon: false }
+    if (!data?.eta || data.eta === "No sortie available") {
+      return { expiresText: "—", isExpiringSoon: false };
     }
 
     // For now, we'll show the ETA as provided by the API
     // In a real implementation, you might want to parse the actual expiry time
-    const expiresText = data.eta
-    const isExpiringSoon = data.eta.includes('m') && !data.eta.includes('h')
+    const expiresText = data.eta;
+    const isExpiringSoon = data.eta.includes("m") && !data.eta.includes("h");
 
-    return { expiresText, isExpiringSoon }
-  }, [data?.eta])
+    return { expiresText, isExpiringSoon };
+  }, [data?.eta]);
 }
 
 const SortieRow = memo(function SortieRow({
@@ -234,17 +229,17 @@ const SortieRow = memo(function SortieRow({
   isExpanded,
   sortieData,
 }: SortieRowProps) {
-  const { expiresText, isExpiringSoon } = useSortieExpiration(sortieData)
+  const { expiresText, isExpiringSoon } = useSortieExpiration(sortieData);
 
   const missionTypeText = useMemo(() => {
-    return resolveMissionType(variant.missionType) || variant.missionType
-  }, [variant.missionType])
+    return resolveMissionType(variant.missionType) || variant.missionType;
+  }, [variant.missionType]);
 
   const locationText = useMemo(() => {
     const nodeLabel =
-      (variant as any).resolvedNodeLabel || variant.node || 'Unknown Node'
-    return `${nodeLabel} • ${missionTypeText}`
-  }, [variant, missionTypeText])
+      (variant as any).resolvedNodeLabel || variant.node || "Unknown Node";
+    return `${nodeLabel} • ${missionTypeText}`;
+  }, [variant, missionTypeText]);
 
   return (
     <div className="group p-3 rounded-lg bg-slate-700/30 border border-slate-600/30 hover:bg-slate-700/50 hover:border-slate-500/50 transition-all duration-200">
@@ -269,7 +264,7 @@ const SortieRow = memo(function SortieRow({
               <div className="relative flex-shrink-0">
                 <Badge
                   variant="secondary"
-                  className={`bg-blue-500/10 text-blue-200 border-blue-400/20 text-xs ${isExpanded ? 'cursor-help' : ''}`}
+                  className={`bg-blue-500/10 text-blue-200 border-blue-400/20 text-xs ${isExpanded ? "cursor-help" : ""}`}
                   title={
                     isExpanded ? safeText(variant.modifierType) : undefined
                   }
@@ -288,10 +283,10 @@ const SortieRow = memo(function SortieRow({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1">
               <Clock
-                className={`w-3 h-3 ${isExpiringSoon ? 'text-red-400' : 'text-slate-400'}`}
+                className={`w-3 h-3 ${isExpiringSoon ? "text-red-400" : "text-slate-400"}`}
               />
               <span
-                className={`text-xs ${isExpiringSoon ? 'text-red-300 font-medium' : 'text-slate-400'}`}
+                className={`text-xs ${isExpiringSoon ? "text-red-300 font-medium" : "text-slate-400"}`}
               >
                 {expiresText}
               </span>
@@ -305,6 +300,5 @@ const SortieRow = memo(function SortieRow({
         </div>
       </div>
     </div>
-  )
-})
-
+  );
+});
