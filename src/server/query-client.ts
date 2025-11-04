@@ -1,30 +1,18 @@
 import { QueryClient } from "@tanstack/react-query";
+import { serverQueryConfig } from "@/lib/query/query-config";
 
 /**
  * Creates a global, singleton QueryClient instance for server-side use.
  * This client is used for a shared, in-memory cache for non-user-specific data.
  *
- * @see Section 2.2 of the architecture report.
+ * Server-side caching strategy:
+ * - staleTime: 60 seconds - Data is fresh for 1 minute to reduce API load
+ * - gcTime: Infinity - Prevents garbage collection to maintain global cache
+ * - retry: 1 attempt - Single retry to avoid long response times
  */
 const createServerQueryClient = () => {
   return new QueryClient({
-    defaultOptions: {
-      queries: {
-        /**
-         * @see Section 2.3 of the architecture report.
-         * staleTime: Your 1-minute cache requirement. Data is fresh for 1 min.
-         */
-        staleTime: 60 * 1000, // 1 minute
-
-        /**
-         * @see Section 2.3 of the architecture report.
-         * gcTime: Infinity. On the server, queries are always 'inactive'.
-         * We set gcTime to Infinity to prevent TanStack Query from
-         * garbage collecting our global, cached data.
-         */
-        gcTime: Infinity,
-      },
-    },
+    defaultOptions: serverQueryConfig,
   });
 };
 
